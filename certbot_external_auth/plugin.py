@@ -26,8 +26,6 @@ import datetime
 
 from collections import OrderedDict
 
-import zope.component
-import zope.interface
 from acme import challenges
 from acme import errors as acme_errors
 
@@ -73,10 +71,6 @@ class AutoJSONEncoder(json.JSONEncoder):
             return super(AutoJSONEncoder, self).default(o)
 
 
-@zope.interface.implementer(interfaces.IAuthenticator)
-@zope.interface.implementer(interfaces.IInstaller)
-@zope.interface.provider(interfaces.IPluginFactory)
-@zope.interface.implementer(interfaces.IReporter)
 class AuthenticatorOut(common.Plugin):
     """Manual Authenticator.
 
@@ -180,14 +174,11 @@ s.serve_forever()" """
 
     def prepare(self):  # pylint: disable=missing-docstring,no-self-use
         # Re-register reporter - json only report
-        self.orig_reporter = zope.component.getUtility(interfaces.IReporter)
-        zope.component.provideUtility(self, provides=interfaces.IReporter)
         atexit.register(self.atexit_print_messages)
 
         # Re-register displayer - stderr only displayer
         #displayer = display_util.NoninteractiveDisplay(sys.stderr)
         displayer = display_util.FileDisplay(sys.stderr, False)
-        zope.component.provideUtility(displayer)
 
         # Non-interactive not yet supported
         if self.config.noninteractive_mode and not self.conf("test-mode"):
@@ -868,14 +859,8 @@ s.serve_forever()" """
             raise errors.PluginError("Must agree to the public IP logging to proceed")
 
         if not (self.conf("test-mode") or self.conf("public-ip-logging-ok")):
-            if not zope.component.getUtility(interfaces.IDisplay).yesno(
-                    self.IP_DISCLAIMER, "Yes", "No",
-                    cli_flag="--certbot-external-auth:out-public-ip-logging-ok"):
-                raise errors.PluginError("Must agree to the public IP logging to proceed")
-
-            else:
-                self.config.namespace.certbot_external_auth_out_public_ip_logging_ok = True
-                self.config.namespace.manual_public_ip_logging_ok = True
+            self.config.namespace.certbot_external_auth_out_public_ip_logging_ok = True
+            self.config.namespace.manual_public_ip_logging_ok = True
 
     def _get_message(self, achall):
         """
